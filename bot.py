@@ -1,21 +1,21 @@
-এimport os
+import os
 import logging
 import json
 from threading import Thread
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
-# Render Port Fix
-class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+# Render Port & Direct HTML Server Fix
+class MyHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"Bot Service Active")
+        if self.path == '/' or self.path == '':
+            self.path = '/index.html'
+        return super().do_GET()
 
 def run_server():
     port = int(os.environ.get("PORT", 8080))
-    server = HTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
+    server = HTTPServer(("0.0.0.0", port), MyHandler)
     server.serve_forever()
 
 Thread(target=run_server, daemon=True).start()
@@ -23,7 +23,8 @@ Thread(target=run_server, daemon=True).start()
 # Bot Setup
 TOKEN = "8906908546:AAE6gPXnqRaXB4G1EbZNjDz0KX_1fhoORSY"
 PAYMENT_CHANNEL_URL = "https://t.me/Student_Earning_Payment_chanel"
-WEB_APP_URL = "https://marufinfobangladesh-prog.github.io/Student-Earning/"
+WEB_APP_URL = "https://student-earningsn.onrender.com"  # Render Web Service Link
+
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 users_db = {}
 
@@ -82,7 +83,6 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         task_type = data.get("task_type", "normal")
         
-        # কাজের ধরন অনুযায়ী টাকা নির্ধারণ
         if task_type == "download":
             reward = 10.0
             task_name = "📲 অ্যাপ ডাউনলোড"
