@@ -2,34 +2,32 @@ import os
 import logging
 import json
 from threading import Thread
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from flask import Flask, send_file
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
-# Render Web Server to serve index.html directly
-class DirectHTMLHandler(SimpleHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == '/' or self.path == '' or not os.path.exists(self.path[1:]):
-            self.path = '/index.html'
-        return super().do_GET()
+# Flask Web Server Configuration
+web_app = Flask(__name__)
 
-def run_server():
+@web_app.route('/')
+def home():
+    if os.path.exists('index.html'):
+        return send_file('index.html')
+    return "index.html file not found in root directory!", 404
+
+def run_flask():
     port = int(os.environ.get("PORT", 8080))
-    server = HTTPServer(("0.0.0.0", port), DirectHTMLHandler)
-    server.serve_forever()
+    web_app.run(host="0.0.0.0", port=port)
 
-# Start local server in background thread
-Thread(target=run_server, daemon=True).start()
+# Start Flask Web Server in background
+Thread(target=run_flask, daemon=True).start()
 
-# Config Configuration
+# Bot Setup Configurations
 TOKEN = "8906908546:AAE6gPXnqRaXB4G1EbZNjDz0KX_1fhoORSY"
 PAYMENT_CHANNEL_URL = "https://t.me/Student_Earning_Payment_chanel"
-WEB_APP_URL = "https://student-earningsn.onrender.com"  # Render Web Service Link
+WEB_APP_URL = "https://student-earningsn.onrender.com"
 
-# Logging Setup
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
-
-# In-Memory Database
 users_db = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -90,7 +88,6 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         task_type = data.get("task_type", "normal")
         
-        # কাজের টাইপ অনুসারে রিওয়ার্ড সেট
         if task_type == "download":
             reward = 10.0
             task_name = "📲 অ্যাপ ডাউনলোড"
@@ -123,7 +120,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"✅ ৳{current_bal} টাকা উইথড্র রিকোয়েস্ট গ্রহণ করা হয়েছে!\n"
             f"📱 বিকাশ নম্বর: {num}\n\n"
-            f"২৪ ঘণ্টার মধ্যে আপনার বিকাশ নম্বরে টাকা পাঠিয়া দেয়া হবে।"
+            f"২৪ ঘণ্টার মধ্যে আপনার বিকাশ নম্বরে টাকা পাঠিয়ে দেয়া হবে।"
         )
 
 def main():
@@ -133,7 +130,6 @@ def main():
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    # Conflict রোধ করতে drop_pending_updates=True রাখা হয়েছে
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
