@@ -1,12 +1,30 @@
+import os
 import logging
 import json
+from threading import Thread
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
+# Render Port Error Fix
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is online")
+
+def run_server():
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
+    server.serve_forever()
+
+Thread(target=run_server, daemon=True).start()
+
+# Bot Setup
 TOKEN = "8906908546:AAE6gPXnqRaXB4G1EbZNjDz0KX_1fhoORSY"
 CHANNEL_USERNAME = "@Student_Earning_Payment_chanel"
 PAYMENT_CHANNEL_URL = "https://t.me/Student_Earning_Payment_chanel"
-WEB_APP_URL = "https://your-app.onrender.com"  # Render এর Static Site লিংক এখানে বসাবে
+WEB_APP_URL = "https://student-earningsn.onrender.com"  # Render Web App Link
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 users_db = {}
@@ -17,11 +35,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         users_db[user.id] = {"balance": 0.0, "completed_today": 0}
 
     keyboard = [
-        [InlineKeyboardButton("📢 পেমেন্ট চ্যানেলে জয়েন করুন", url=PAYMENT_CHANNEL_URL)],
+        [InlineKeyboardButton("📢 চ্যানেলে জয়েন করুন", url=PAYMENT_CHANNEL_URL)],
         [InlineKeyboardButton("✅ জয়েন করেছি, চেক করুন", callback_data="check_join")]
     ]
     await update.message.reply_text(
-        f"স্বাগতম **{user.first_name}** Student Earning-এ!\n\nকাজ শুরু করতে আগে আমাদের পেমেন্ট প্রুফ চ্যানেলে জয়েন করুন:",
+        f"স্বাগতম **{user.first_name}** Student Earning-এ!\n\nকাজ করতে আগে চ্যানেলে জয়েন করুন:",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
@@ -42,8 +60,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if member.status in ["member", "administrator", "creator"]:
                 await query.edit_message_text("✅ ভেরিফিকেশন সফল! নিচের বাটন থেকে কাজ করুন:", reply_markup=InlineKeyboardMarkup(main_keyboard))
             else:
-                await query.answer("❌ আগে পেমেন্ট চ্যানেলে জয়েন করুন!", show_alert=True)
+                await query.answer("❌ আগে চ্যানেলে জয়েন করুন!", show_alert=True)
         except Exception:
+            # এরর এড়াতে জয়েন নিশ্চিত ধরে এক্সেস দেয়া
             await query.edit_message_text("✅ ভেরিফিকেশন সফল! নিচের বাটন থেকে কাজ করুন:", reply_markup=InlineKeyboardMarkup(main_keyboard))
 
     elif query.data == "balance":
