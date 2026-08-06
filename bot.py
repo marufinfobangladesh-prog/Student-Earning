@@ -6,26 +6,30 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
-# Render Port & Direct HTML Server Fix
-class MyHandler(SimpleHTTPRequestHandler):
+# Render Web Server to serve index.html directly
+class DirectHTMLHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
-        if self.path == '/' or self.path == '':
+        if self.path == '/' or self.path == '' or not os.path.exists(self.path[1:]):
             self.path = '/index.html'
         return super().do_GET()
 
 def run_server():
     port = int(os.environ.get("PORT", 8080))
-    server = HTTPServer(("0.0.0.0", port), MyHandler)
+    server = HTTPServer(("0.0.0.0", port), DirectHTMLHandler)
     server.serve_forever()
 
+# Start local server in background thread
 Thread(target=run_server, daemon=True).start()
 
-# Bot Setup
+# Config Configuration
 TOKEN = "8906908546:AAE6gPXnqRaXB4G1EbZNjDz0KX_1fhoORSY"
 PAYMENT_CHANNEL_URL = "https://t.me/Student_Earning_Payment_chanel"
 WEB_APP_URL = "https://student-earningsn.onrender.com"  # Render Web Service Link
 
+# Logging Setup
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+
+# In-Memory Database
 users_db = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -71,8 +75,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    data = json.loads(update.message.web_app_data.data)
-    
+    try:
+        data = json.loads(update.message.web_app_data.data)
+    except Exception:
+        return
+
     if data.get("status") == "success":
         if user_id not in users_db:
             users_db[user_id] = {"balance": 0.0, "completed_today": 0}
@@ -83,6 +90,7 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         task_type = data.get("task_type", "normal")
         
+        # কাজের টাইপ অনুসারে রিওয়ার্ড সেট
         if task_type == "download":
             reward = 10.0
             task_name = "📲 অ্যাপ ডাউনলোড"
@@ -97,7 +105,7 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
         users_db[user_id]["balance"] += reward
         
         await update.message.reply_text(
-            f"🎉 **{task_name}** জমা হয়েছে!\n"
+            f"🎉 **{task_name}** সফলভাবে জমা হয়েছে!\n"
             f"➕ যোগ হয়েছে: ৳{reward}\n"
             f"💰 মোট ব্যালেন্স: ৳{users_db[user_id]['balance']}\n"
             f"🎯 আজকের মোট কাজ: {users_db[user_id]['completed_today']}/১০",
@@ -108,19 +116,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get('waiting_bkash'):
         num = update.message.text
         user_id = update.effective_user.id
-        current_bal = users_db[user_id]['balance']
+        current_bal = users_db.get(user_id, {}).get('balance', 0.0)
         
         users_db[user_id]['balance'] = 0.0
         context.user_data['waiting_bkash'] = False
-        await update.message.reply_text(f"✅ ৳{current_bal} টাকা উইথড্র রিকোয়েস্ট গ্রহণ করা হয়েছে!\n📱 বিকাশ নম্বর: {num}\n\n২৪ ঘণ্টার মধ্যে পেমেন্ট পেয়ে যাবেন।")
+        await update.message.reply_text(
+            f"✅ ৳{current_bal} টাকা উইথড্র রিকোয়েস্ট গ্রহণ করা হয়েছে!\n"
+            f"📱 বিকাশ নম্বর: {num}\n\n"
+            f"২৪ ঘণ্টার মধ্যে আপনার বিকাশ নম্বরে টাকা পাঠিয়া দেয়া হবে।"
+        )
 
 def main():
-    app = Application.builder().token(TOKEN).build()
+    app = Application.builder().token(TOKEN).concurrent_updates(True).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.run_polling()
+    
+    # Conflict রোধ করতে drop_pending_updates=True রাখা হয়েছে
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
