@@ -1,64 +1,157 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Student Earning Task</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; padding: 30px 15px; background-color: #121212; color: #ffffff; }
-    .card { background: #1e1e1e; padding: 25px; border-radius: 12px; max-width: 400px; margin: 0 auto; }
-    h2 { color: #0088cc; }
-    .btn { background: #28a745; color: white; padding: 15px 25px; border: none; font-size: 18px; border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-block; width: 80%; margin: 20px 0; }
-    #timer { font-size: 20px; color: #ffcc00; font-weight: bold; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Earning Work Panel</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #ffffff;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 20px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-sizing: border-box;
+        }
+        h2 { text-align: center; color: #00f2fe; margin-top: 0; font-size: 22px; }
+        .rule-box {
+            background: rgba(0, 242, 254, 0.1);
+            border-left: 4px solid #00f2fe;
+            padding: 10px 12px;
+            margin: 10px 0;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .btn {
+            width: 100%;
+            background: linear-gradient(45deg, #00c6ff, #0072ff);
+            border: none;
+            color: white;
+            padding: 14px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: 0.3s;
+        }
+        .btn:disabled {
+            background: #4a5568;
+            cursor: not-allowed;
+        }
+        .timer {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffeb3b;
+            margin: 15px 0;
+        }
+        .radio-section {
+            display: none;
+            margin-top: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        .radio-option {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .radio-option input { margin-right: 12px; transform: scale(1.2); }
+    </style>
 </head>
 <body>
-  <div class="card">
-    <h2>Student Earning Task</h2>
-    <p>লিংকে ক্লিক করে ২০ সেকেন্ড অপেক্ষা করুন।</p>
-    <a id="ad-link" href="#" target="_blank" class="btn" onclick="startTimer()">বিজ্ঞাপন দেখুন (Adsterra)</a>
-    <div id="timer">টাইমার শুরু করতে উপরে ক্লিক করুন</div>
-  </div>
+    <div class="card">
+        <h2>🎯 আজকের কাজের নিয়মাবলি</h2>
+        
+        <div class="rule-box">
+            <b>📲 অ্যাপ ডাউনলোড / বেটিং এড:</b> লিংকে গিয়ে অ্যাপ ডাউনলোড করলে <b>৳১০</b> পাবেন।
+        </div>
+        <div class="rule-box">
+            <b>🎰 স্পিন টাস্ক:</b> সাইটে কোনো Spin করার অপশন থাকলে Spin করলে <b>৳৮</b> পাবেন।
+        </div>
+        <div class="rule-box">
+            <b>📜 নরমাল এড স্ক্রলিং:</b> সাধারণ এড আসলে ২০ সেকেন্ড স্ক্রল করলে <b>৳৫</b> পাবেন।
+        </div>
 
-  <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
+        <button id="taskBtn" class="btn" onclick="startTask()">🔗 কাজ শুরু করুন (২০ সেকেন্ড অপেক্ষা করুন)</button>
+        <div id="timer" class="timer"></div>
 
-    const adLinks = [
-      "https://www.effectivecpmnetwork.com/dar7a98q?key=81267deb8b37a49b5ca0826dc742009e",
-      "https://www.effectivecpmnetwork.com/w2qni6kp7?key=7dd3088a50b10ebeab08e6107caae24e",
-      "https://www.effectivecpmnetwork.com/xeyd3v335z?key=afdf4ce74e948228dc6004070edaacee",
-      "https://www.effectivecpmnetwork.com/gzumiyz2d?key=5de7e73636b61d294daf66fae2eeee5b",
-      "https://www.effectivecpmnetwork.com/fw449iihq?key=cef9f8214ff71828f1c42f3676c7b507",
-      "https://www.effectivecpmnetwork.com/s1tqabu9?key=a6eff91ac3621a40ea2010f8f334eebe",
-      "https://www.effectivecpmnetwork.com/cq8a2jmb?key=6898bf8958e528f1c290da2073d5d0bc",
-      "https://www.effectivecpmnetwork.com/inpvcvhff?key=c4c46704067f0a5d4dba417b79e43e0f",
-      "https://www.effectivecpmnetwork.com/wn9ntj396e?key=880917a53d5f48b83b961a1d98dc6b5e",
-      "https://www.effectivecpmnetwork.com/crewwzdkze?key=bc80e0192942a978232d0a9a23c9b46e"
-    ];
+        <div id="radioSection" class="radio-section">
+            <p style="margin: 0 0 10px 0; color: #00f2fe; font-weight: bold;">কোন কাজ সম্পন্ন করেছেন সিলেক্ট করুন:</p>
+            
+            <label class="radio-option">
+                <input type="radio" name="task_type" value="download">
+                📲 অ্যাপ ডাউনলোড করা হয়েছে (৳১০)
+            </label>
 
-    const randomTask = Math.floor(Math.random() * adLinks.length);
-    document.getElementById('ad-link').href = adLinks[randomTask];
+            <label class="radio-option">
+                <input type="radio" name="task_type" value="spin">
+                🎰 স্পিন করা হয়েছে (৳৮)
+            </label>
 
-    let timeLeft = 20;
-    let timerStarted = false;
+            <label class="radio-option">
+                <input type="radio" name="task_type" value="normal" checked>
+                📜 নরমাল এড স্ক্রলিং করা হয়েছে (৳৫)
+            </label>
 
-    function startTimer() {
-      if (timerStarted) return;
-      timerStarted = true;
-      const countdown = setInterval(() => {
-        timeLeft--;
-        document.getElementById('timer').innerText = "সময় বাকি: " + timeLeft + " সেকেন্ড";
-        if (timeLeft <= 0) {
-          clearInterval(countdown);
-          document.getElementById('timer').innerText = "✅ কাজ সম্পন্ন হয়েছে!";
-          setTimeout(() => {
-            tg.sendData(JSON.stringify({ status: "success" }));
-          }, 1000);
+            <button id="submitBtn" class="btn" onclick="submitTask()">✅ সাবমিট করুন</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        let timeLeft = 20;
+        let timerId = null;
+
+        function startTask() {
+            // আপনার এডের লিংক এখানে বসাবেন
+            window.open('https://google.com', '_blank'); 
+            
+            document.getElementById('taskBtn').disabled = true;
+            document.getElementById('timer').innerText = "⏱️ সময় বাকি: " + timeLeft + " সেকেন্ড";
+
+            timerId = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').innerText = "⏱️ সময় বাকি: " + timeLeft + " সেকেন্ড";
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerId);
+                    document.getElementById('timer').innerText = "✅ ২০ সেকেন্ড সম্পন্ন হয়েছে!";
+                    document.getElementById('radioSection').style.display = 'block';
+                }
+            }, 1000);
         }
-      }, 1000);
-    }
-  </script>
+
+        function submitTask() {
+            const selectedType = document.querySelector('input[name="task_type"]:checked').value;
+            tg.sendData(JSON.stringify({
+                status: "success",
+                task_type: selectedType
+            }));
+        }
+    </script>
 </body>
 </html>
