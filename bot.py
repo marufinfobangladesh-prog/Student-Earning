@@ -7,27 +7,26 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
-# Telegram WebApp Query Parameter Fix
-class TelegramWebAppHandler(SimpleHTTPRequestHandler):
+# Configurations
+TOKEN = "8906908546:AAE6gPXnqRaXB4G1EbZNjDz0KX_1fhoORSY"
+PAYMENT_CHANNEL_URL = "https://t.me/Student_Earning_Payment_chanel"
+WEB_APP_URL = "https://student-earning-gray.vercel.app"
+
+# Dummy HTTP Server for Render Port Binding
+class SimpleHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
-        # URL থেকে query parameters বাদ দিয়ে মূল পাথ চেক করা
-        clean_path = urlparse(self.path).path
-        if clean_path in ['/', ''] or not os.path.exists(clean_path.lstrip('/')):
-            self.path = '/index.html'
-        return super().do_GET()
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b"Telegram Bot is Running Successfully!")
 
 def run_server():
     port = int(os.environ.get("PORT", 8080))
-    server = HTTPServer(("0.0.0.0", port), TelegramWebAppHandler)
+    server = HTTPServer(("0.0.0.0", port), SimpleHandler)
     server.serve_forever()
 
-# Start Web Server in background thread
+# Start background web server for Render
 Thread(target=run_server, daemon=True).start()
-
-# Bot Setup Configurations
-TOKEN = "8906908546:AAE6gPXnqRaXB4G1EbZNjDz0KX_1fhoORSY"
-PAYMENT_CHANNEL_URL = "https://t.me/Student_Earning_Payment_chanel"
-WEB_APP_URL = "https://student-earningsn.onrender.com"
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 users_db = {}
