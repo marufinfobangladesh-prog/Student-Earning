@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Earning Task</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 30px 15px; background-color: #121212; color: #ffffff; }
+    .card { background: #1e1e1e; padding: 25px; border-radius: 12px; max-width: 400px; margin: 0 auto; }
+    h2 { color: #0088cc; }
+    .btn { background: #28a745; color: white; padding: 15px 25px; border: none; font-size: 18px; border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-block; width: 80%; margin: 20px 0; }
+    #timer { font-size: 20px; color: #ffcc00; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Student Earning Task</h2>
+    <p>লিংকে ক্লিক করে ২০ সেকেন্ড অপেক্ষা করুন।</p>
+    <a id="ad-link" href="#" target="_blank" class="btn" onclick="startTimer()">বিজ্ঞাপন দেখুন (Adsterra)</a>
+    <div id="timer">টাইমার শুরু করতে উপরে ক্লিক করুন</div>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    const adLinks = [
+      "https://www.effectivecpmnetwork.com/dar7a98q?key=81267deb8b37a49b5ca0826dc742009e",
+      "https://www.effectivecpmnetwork.com/w2qni6kp7?key=7dd3088a50b10ebeab08e6107caae24e",
+      "https://www.effectivecpmnetwork.com/xeyd3v335z?key=afdf4ce74e948228dc6004070edaacee",
+      "https://www.effectivecpmnetwork.com/gzumiyz2d?key=5de7e73636b61d294daf66fae2eeee5b",
+      "https://www.effectivecpmnetwork.com/fw449iihq?key=cef9f8214ff71828f1c42f3676c7b507",
+      "https://www.effectivecpmnetwork.com/s1tqabu9?key=a6eff91ac3621a40ea2010f8f334eebe",
+      "https://www.effectivecpmnetwork.com/cq8a2jmb?key=6898bf8958e528f1c290da2073d5d0bc",
+      "https://www.effectivecpmnetwork.com/inpvcvhff?key=c4c46704067f0a5d4dba417b79e43e0f",
+      "https://www.effectivecpmnetwork.com/wn9ntj396e?key=880917a53d5f48b83b961a1d98dc6b5e",
+      "https://www.effectivecpmnetwork.com/crewwzdkze?key=bc80e0192942a978232d0a9a23c9b46e"
+    ];
+
+    const randomTask = Math.floor(Math.random() * adLinks.length);
+    document.getElementById('ad-link').href = adLinks[randomTask];
+
+    let timeLeft = 20;
+    let timerStarted = false;
+
+    function startTimer() {
+      if (timerStarted) return;
+      timerStarted = true;
+      const countdown = setInterval(() => {
+        timeLeft--;
+        document.getElementById('timer').innerText = "সময় বাকি: " + timeLeft + " সেকেন্ড";
+        if (timeLeft <= 0) {
+          clearInterval(countdown);
+          document.getElementById('timer').innerText = "✅ কাজ সম্পন্ন হয়েছে!";
+          setTimeout(() => {
+            tg.sendData(JSON.stringify({ status: "success" }));
+          }, 1000);
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
