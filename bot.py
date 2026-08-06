@@ -2,25 +2,27 @@ import os
 import logging
 import json
 from threading import Thread
-from flask import Flask, send_file
+from urllib.parse import urlparse
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
-# Flask Web Server Configuration
-web_app = Flask(__name__)
+# Telegram WebApp Query Parameter Fix
+class TelegramWebAppHandler(SimpleHTTPRequestHandler):
+    def do_GET(self):
+        # URL থেকে query parameters বাদ দিয়ে মূল পাথ চেক করা
+        clean_path = urlparse(self.path).path
+        if clean_path in ['/', ''] or not os.path.exists(clean_path.lstrip('/')):
+            self.path = '/index.html'
+        return super().do_GET()
 
-@web_app.route('/')
-def home():
-    if os.path.exists('index.html'):
-        return send_file('index.html')
-    return "index.html file not found in root directory!", 404
-
-def run_flask():
+def run_server():
     port = int(os.environ.get("PORT", 8080))
-    web_app.run(host="0.0.0.0", port=port)
+    server = HTTPServer(("0.0.0.0", port), TelegramWebAppHandler)
+    server.serve_forever()
 
-# Start Flask Web Server in background
-Thread(target=run_flask, daemon=True).start()
+# Start Web Server in background thread
+Thread(target=run_server, daemon=True).start()
 
 # Bot Setup Configurations
 TOKEN = "8906908546:AAE6gPXnqRaXB4G1EbZNjDz0KX_1fhoORSY"
