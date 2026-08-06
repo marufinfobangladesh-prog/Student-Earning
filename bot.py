@@ -23,8 +23,7 @@ Thread(target=run_server, daemon=True).start()
 # Bot Setup
 TOKEN = "8906908546:AAE6gPXnqRaXB4G1EbZNjDz0KX_1fhoORSY"
 PAYMENT_CHANNEL_URL = "https://t.me/Student_Earning_Payment_chanel"
-WEB_APP_URL = "https://student-earningsn.onrender.com"  # Render Web App Link
-
+WEB_APP_URL = "https://marufinfobangladesh-prog.github.io/Student-Earning/"
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 users_db = {}
 
