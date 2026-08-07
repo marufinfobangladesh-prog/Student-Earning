@@ -3,54 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Earning Tasks</title>
-    <!-- Telegram WebApp SDK (এটি আবশ্যক) -->
+    <title>Student Earning</title>
+    <!-- Telegram WebApp SDK (বটে ডাটা পাঠানোর জন্য প্রয়োজনীয়) -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #0f172a;
-            color: #ffffff;
+        * {
+            box-sizing: border-box;
             margin: 0;
-            padding: 15px;
-            text-align: center;
+            padding: 0;
+            font-family: Arial, sans-serif;
         }
-        .notice {
+        body {
+            background-color: #0d1527;
+            color: #ffffff;
+            padding: 15px;
+        }
+        .notice-box {
             background-color: #7f1d1d;
             border: 1px solid #ef4444;
-            padding: 10px;
+            color: #fecaca;
+            padding: 12px;
             border-radius: 8px;
             font-size: 13px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+        .section-title {
+            font-size: 15px;
+            margin-bottom: 12px;
+            color: #38bdf8;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .rules-card {
+            background-color: #1e293b;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+        }
+        .rule-item {
+            display: flex;
+            justify-content: space-between;
+            background-color: #0f172a;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .rule-item:last-child {
+            margin-bottom: 0;
+        }
+        .badge {
+            background-color: #0284c7;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
         .task-card {
             background-color: #1e293b;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 12px;
+            border-radius: 8px;
+            padding: 12px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .task-title {
+        .task-name {
             font-size: 14px;
-            font-weight: bold;
+            font-weight: 500;
         }
-        .btn {
+        .btn-link {
             background-color: #2563eb;
             color: white;
             border: none;
-            padding: 8px 15px;
+            padding: 8px 16px;
             border-radius: 6px;
-            cursor: pointer;
             font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
         }
-        .btn:disabled {
+        .btn-link:disabled {
             background-color: #475569;
+            color: #cbd5e1;
             cursor: not-allowed;
         }
-        .timer {
-            color: #f59e0b;
+        .completed-btn {
+            background-color: #166534;
+            color: #86efac;
+            padding: 6px 12px;
+            border-radius: 6px;
             font-size: 13px;
             font-weight: bold;
         }
@@ -58,76 +106,150 @@
 </head>
 <body>
 
-    <div class="notice">
-        ⚠️ <b>জরুরি নোটিশ:</b> ভিপ্রিএন (VPN) ব্যবহার করে কাজ করলে অ্যাকাউন্ট ব্লক করা হবে।
+    <!-- জরুরি নোটিশ -->
+    <div class="notice-box">
+        ⚠️ <b>জরুরি নোটিশ:</b><br>
+        ভিপ্রিএন (VPN) ব্যবহার করে কাজ করলে অ্যাকাউন্ট পারমানেন্ট ব্লক করা হবে। সততার সাথে কাজ সম্পন্ন করুন।
     </div>
 
-    <h3>📋 কাজের তালিকা</h3>
-
-    <!-- টাস্ক ১ -->
-    <div class="task-card">
-        <div class="task-title">টাস্ক #১ (২০ সেকেন্ড থাকুন)</div>
-        <button class="btn" id="btn-1" onclick="startTask(1, 'normal')">কাজ লিংক</button>
+    <!-- আজকের কাজের নিয়মাবলী -->
+    <div class="section-title">
+        🎯 আজকের কাজের নিয়মাবলী
+    </div>
+    <div class="rules-card">
+        <div class="rule-item">
+            <span>📲 অ্যাপ ডাউনলোড / বেটিং এড</span>
+            <span class="badge">৳১০</span>
+        </div>
+        <div class="rule-item">
+            <span>🎰 স্পিন টাস্ক</span>
+            <span class="badge">৳৮</span>
+        </div>
+        <div class="rule-item">
+            <span>📜 নরমাল এড স্ক্রলিং (২০ সে.)</span>
+            <span class="badge">৳৫</span>
+        </div>
     </div>
 
-    <!-- টাস্ক ২ -->
-    <div class="task-card">
-        <div class="task-title">টাস্ক #২ (২০ সেকেন্ড থাকুন)</div>
-        <button class="btn" id="btn-2" onclick="startTask(2, 'normal')">কাজ লিংক</button>
+    <!-- কাজের তালিকা -->
+    <div class="section-title">
+        📋 কাজের তালিকা (Serial Tasks)
     </div>
 
-    <!-- টাস্ক ৩ (স্পিন) -->
-    <div class="task-card">
-        <div class="task-title">টাস্ক #৩ (স্পিন টাস্ক)</div>
-        <button class="btn" id="btn-3" onclick="startTask(3, 'spin')">কাজ লিংক</button>
-    </div>
+    <div class="task-list">
+        <!-- টাস্ক ১ থেকে ১০ -->
+        <div class="task-card">
+            <div class="task-name" id="title-1">টাস্ক #১ (২০ সেকেন্ড থাকুন)</div>
+            <div id="action-1">
+                <button class="btn-link" onclick="startTask(1, 'normal', 'https://www.google.com')">কাজ লিংক</button>
+            </div>
+        </div>
 
-    <!-- টাস্ক ৪ (অ্যাপ টাস্ক) -->
-    <div class="task-card">
-        <div class="task-title">টাস্ক #৪ (অ্যাপ টাস্ক)</div>
-        <button class="btn" id="btn-4" onclick="startTask(4, 'app')">কাজ লিংক</button>
+        <div class="task-card">
+            <div class="task-name" id="title-2">টাস্ক #২ (২০ সেকেন্ড থাকুন)</div>
+            <div id="action-2">
+                <button class="btn-link" onclick="startTask(2, 'normal', 'https://www.google.com')">কাজ লিংক</button>
+            </div>
+        </div>
+
+        <div class="task-card">
+            <div class="task-name" id="title-3">টাস্ক #৩ (স্পিন টাস্ক)</div>
+            <div id="action-3">
+                <button class="btn-link" onclick="startTask(3, 'spin', 'https://www.google.com')">কাজ লিংক</button>
+            </div>
+        </div>
+
+        <div class="task-card">
+            <div class="task-name" id="title-4">টাস্ক #৪ (অ্যাপ ডাউনলোড)</div>
+            <div id="action-4">
+                <button class="btn-link" onclick="startTask(4, 'app', 'https://www.google.com')">কাজ লিংক</button>
+            </div>
+        </div>
+
+        <div class="task-card">
+            <div class="task-name" id="title-5">টাস্ক #৫ (২০ সেকেন্ড থাকুন)</div>
+            <div id="action-5">
+                <button class="btn-link" onclick="startTask(5, 'normal', 'https://www.google.com')">কাজ লিংক</button>
+            </div>
+        </div>
+
+        <div class="task-card">
+            <div class="task-name" id="title-6">টাস্ক #৬ (২০ সেকেন্ড থাকুন)</div>
+            <div id="action-6">
+                <button class="btn-link" onclick="startTask(6, 'normal', 'https://www.google.com')">কাজ লিংক</button>
+            </div>
+        </div>
+
+        <div class="task-card">
+            <div class="task-name" id="title-7">টাস্ক #৭ (২০ সেকেন্ড থাকুন)</div>
+            <div id="action-7">
+                <button class="btn-link" onclick="startTask(7, 'normal', 'https://www.google.com')">কাজ লিংক</button>
+            </div>
+        </div>
+
+        <div class="task-card">
+            <div class="task-name" id="title-8">টাস্ক #৮ (২০ সেকেন্ড থাকুন)</div>
+            <div id="action-8">
+                <button class="btn-link" onclick="startTask(8, 'normal', 'https://www.google.com')">কাজ লিংক</button>
+            </div>
+        </div>
+
+        <div class="task-card">
+            <div class="task-name" id="title-9">টাস্ক #৯ (২০ সেকেন্ড থাকুন)</div>
+            <div id="action-9">
+                <button class="btn-link" onclick="startTask(9, 'normal', 'https://www.google.com')">কাজ লিংক</button>
+            </div>
+        </div>
+
+        <div class="task-card">
+            <div class="task-name" id="title-10">টাস্ক #১০ (২০ সেকেন্ড থাকুন)</div>
+            <div id="action-10">
+                <button class="btn-link" onclick="startTask(10, 'normal', 'https://www.google.com')">কাজ লিংক</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        // Telegram WebApp ইনিশিয়ালাইজেশন
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+        const tg = window.Telegram ? window.Telegram.WebApp : null;
+        if (tg) {
+            tg.expand();
+        }
 
-        function startTask(taskId, taskType) {
-            const btn = document.getElementById(`btn-${taskId}`);
+        function startTask(taskId, taskType, targetUrl) {
+            const actionDiv = document.getElementById(`action-${taskId}`);
+            
+            // কাজের ওয়েবসাইট নতুন ট্যাবে ওপেন হবে
+            window.open(targetUrl, '_blank');
+
             let timeLeft = 20;
+            actionDiv.innerHTML = `<button class="btn-link" disabled>অপেক্ষা করুন (${timeLeft}s)</button>`;
 
-            btn.disabled = true;
-            btn.innerText = `অপেক্ষা করুন (${timeLeft}s)`;
-
-            // ২০ সেকেন্ডের কাউন্টডাউন টাইমার
             const timer = setInterval(() => {
                 timeLeft--;
-                btn.innerText = `অপেক্ষা করুন (${timeLeft}s)`;
-
-                if (timeLeft <= 0) {
+                if (timeLeft > 0) {
+                    actionDiv.innerHTML = `<button class="btn-link" disabled>অপেক্ষা করুন (${timeLeft}s)</button>`;
+                } else {
                     clearInterval(timer);
-                    btn.innerText = "জমা হচ্ছে...";
-                    sendTaskToBot(taskType);
+                    actionDiv.innerHTML = `<button class="btn-link" style="background-color:#16a34a;" disabled>জমা হচ্ছে...</button>`;
+                    submitTaskToBot(taskType);
                 }
             }, 1000);
         }
 
-        // বটের কাছে ডাটা পাঠানোর মূল ফাংশন
-        function sendTaskToBot(taskType) {
+        function submitTaskToBot(taskType) {
             if (tg && tg.sendData) {
                 const data = JSON.stringify({
                     status: "success",
                     task_type: taskType
                 });
                 
-                // ডাটা টেলিগ্রাম বটে পাঠানো হচ্ছে
+                // টেলিগ্রাম বটের কাছে ডাটা সাবমিট করা
                 tg.sendData(data);
                 
-                // ডাটা পাঠনোর পর ওয়েব অ্যাপ অটোমেটিক বন্ধ হয়ে যাবে
+                // সাবমিট শেষে ওয়েব অ্যাপ বন্ধ হয়ে যাবে
                 tg.close();
             } else {
-                alert("অনুগ্রহ করে টেলিগ্রাম অ্যাপের ভেতর থেকে কাজটি ওপেন করুন।");
+                alert("ডাটা সাবমিট করার জন্য অনুগ্রহ করে টেলিগ্রাম বটের ভেতর থেকে কাজ ওপেন করুন।");
             }
         }
     </script>
