@@ -1,156 +1,213 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Earning Work Panel</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            color: #ffffff;
-            margin: 0;
-            padding: 15px;
-            display: flex;
-            justify-content: center;
-        }
-        .card {
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(12px);
-            border-radius: 16px;
-            padding: 20px;
-            width: 100%;
-            max-width: 420px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-sizing: border-box;
-        }
-        h2 { text-align: center; color: #00f2fe; margin-top: 0; font-size: 22px; }
-        .rule-box {
-            background: rgba(0, 242, 254, 0.1);
-            border-left: 4px solid #00f2fe;
-            padding: 10px 12px;
-            margin: 10px 0;
-            border-radius: 6px;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-        .btn {
-            width: 100%;
-            background: linear-gradient(45deg, #00c6ff, #0072ff);
-            border: none;
-            color: white;
-            padding: 14px;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-            margin-top: 15px;
-            transition: 0.3s;
-        }
-        .btn:disabled {
-            background: #4a5568;
-            cursor: not-allowed;
-        }
-        .timer {
-            text-align: center;
-            font-size: 18px;
-            font-weight: bold;
-            color: #ffeb3b;
-            margin: 15px 0;
-        }
-        .radio-section {
-            display: none;
-            margin-top: 20px;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 15px;
-            border-radius: 10px;
-        }
-        .radio-option {
-            display: flex;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 12px;
-            margin: 8px 0;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .radio-option input { margin-right: 12px; transform: scale(1.2); }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Earning Tasks</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+    body { background-color: #0f172a; color: #f8fafc; padding: 12px; }
+    
+    /* Notice Board Box */
+    .notice-card {
+      background: linear-gradient(135deg, #7f1d1d, #991b1b);
+      border: 1px solid #f87171;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      line-height: 1.4;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+    .notice-title { font-weight: bold; color: #fef08a; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 14px; }
+
+    /* Rules Dashboard Box */
+    .rules-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    .rules-title { font-size: 15px; font-weight: bold; color: #38bdf8; margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 6px; }
+    .rule-item { font-size: 12px; color: #cbd5e1; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; background: #0f172a; padding: 8px; border-radius: 6px; }
+    .rule-badge { background: #0284c7; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+
+    /* Status Banner */
+    .status-box {
+      display: none;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 12px;
+      font-weight: bold;
+      font-size: 13px;
+    }
+
+    /* Serial Task List */
+    .section-title { font-size: 15px; font-weight: bold; color: #f1f5f9; margin-bottom: 10px; }
+    .task-list { display: flex; flex-direction: column; gap: 10px; }
+    .task-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .task-info { display: flex; flex-direction: column; gap: 4px; }
+    .task-name { font-size: 13px; font-weight: bold; color: #e2e8f0; }
+    .task-reward { font-size: 12px; color: #4ade80; font-weight: bold; }
+    .btn-task {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-task:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; }
+    .btn-completed { background: #15803d; color: #dcfce7; }
+  </style>
 </head>
 <body>
-    <div class="card">
-        <h2>🎯 আজকের কাজের নিয়মাবলি</h2>
-        
-        <div class="rule-box">
-            <b>📲 অ্যাপ ডাউনলোড / বেটিং এড:</b> লিংকে গিয়ে অ্যাপ ডাউনলোড করলে <b>৳১০</b> পাবেন।
-        </div>
-        <div class="rule-box">
-            <b>🎰 স্পিন টাস্ক:</b> সাইটে কোনো Spin করার অপশন থাকলে Spin করলে <b>৳৮</b> পাবেন।
-        </div>
-        <div class="rule-box">
-            <b>📜 নরমাল এড স্ক্রলিং:</b> সাধারণ এড আসলে ২০ সেকেন্ড স্ক্রল করলে <b>৳৫</b> পাবেন।
-        </div>
 
-        <button id="taskBtn" class="btn" onclick="startTask()">🔗 কাজ শুরু করুন (২০ সেকেন্ড অপেক্ষা করুন)</button>
-        <div id="timer" class="timer"></div>
+  <!-- Notice Board -->
+  <div class="notice-card">
+    <div class="notice-title">⚠️ জরুরি নোটিশ:</div>
+    ভিপিএন (VPN) ব্যবহার করে কাজ করলে অ্যাকাউন্ট পার্মানেন্ট ব্লক করা হবে। সততার সাথে কাজ সম্পন্ন করুন।
+  </div>
 
-        <div id="radioSection" class="radio-section">
-            <p style="margin: 0 0 10px 0; color: #00f2fe; font-weight: bold;">কোন কাজ সম্পন্ন করেছেন সিলেক্ট করুন:</p>
-            
-            <label class="radio-option">
-                <input type="radio" name="task_type" value="download">
-                📲 অ্যাপ ডাউনলোড করা হয়েছে (৳১০)
-            </label>
-
-            <label class="radio-option">
-                <input type="radio" name="task_type" value="spin">
-                🎰 স্পিন করা হয়েছে (৳৮)
-            </label>
-
-            <label class="radio-option">
-                <input type="radio" name="task_type" value="normal" checked>
-                📜 নরমাল এড স্ক্রলিং করা হয়েছে (৳৫)
-            </label>
-
-            <button id="submitBtn" class="btn" onclick="submitTask()">✅ সাবমিট করুন</button>
-        </div>
+  <!-- Rules Dashboard -->
+  <div class="rules-card">
+    <div class="rules-title">🎯 আজকের কাজের নিয়ামাবলী</div>
+    <div class="rule-item">
+      <span>📲 অ্যাপ ডাউনলোড / বেটিং এড</span>
+      <span class="rule-badge">৳১০</span>
     </div>
+    <div class="rule-item">
+      <span>🎰 স্পিন টাস্ক</span>
+      <span class="rule-badge">৳৮</span>
+    </div>
+    <div class="rule-item">
+      <span>📜 নরমাল এড স্ক্রলিং (২০ সে.)</span>
+      <span class="rule-badge">৳৫</span>
+    </div>
+  </div>
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+  <!-- Status Alert Banner -->
+  <div id="statusBox" class="status-box"></div>
 
-        let timeLeft = 20;
-        let timerId = null;
+  <!-- Task List (Serial Wise) -->
+  <div class="section-title">📋 কাজের তালিকা (Serial Tasks)</div>
+  <div class="task-list" id="taskList"></div>
 
-        function startTask() {
-            window.open('https://google.com', '_blank'); 
-            
-            document.getElementById('taskBtn').disabled = true;
-            document.getElementById('timer').innerText = "⏱️ সময় বাকি: " + timeLeft + " সেকেন্ড";
+  <script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) tg.expand();
 
-            timerId = setInterval(() => {
-                timeLeft--;
-                document.getElementById('timer').innerText = "⏱️ সময় বাকি: " + timeLeft + " সেকেন্ড";
-                
-                if (timeLeft <= 0) {
-                    clearInterval(timerId);
-                    document.getElementById('timer').innerText = "✅ ২০ সেকেন্ড সম্পন্ন হয়েছে!";
-                    document.getElementById('radioSection').style.display = 'block';
-                }
-            }, 1000);
-        }
+    // Adsterra Direct Links Array (10 Serial Links)
+    const adLinks = [
+      "https://www.highratecpmgate.com/z0m7163s?key=f074d209b5eb005ed2a8cfdf5e38676f",
+      "https://www.highratecpmgate.com/z0m7163s?key=f074d209b5eb005ed2a8cfdf5e38676f",
+      "https://www.highratecpmgate.com/z0m7163s?key=f074d209b5eb005ed2a8cfdf5e38676f",
+      "https://www.highratecpmgate.com/z0m7163s?key=f074d209b5eb005ed2a8cfdf5e38676f",
+      "https://www.highratecpmgate.com/z0m7163s?key=f074d209b5eb005ed2a8cfdf5e38676f",
+      "https://www.highratecpmgate.com/z0m7163s?key=f074d209b5eb005ed2a8cfdf5e38676f",
+      "https://www.highratecpmgate.com/z0m7163s?key=f074d209b5eb005ed2a8cfdf5e38676f",
+      "https://www.highratecpmgate.com/z0m7163s?key=f074d209b5eb005ed2a8cfdf5e38676f",
+      "https://www.highratecpmgate.com/z0m7163s?key=f074d209b5eb005ed2a8cfdf5e38676f",
+      "https://www.highratecpmgate.com/z0m7163s?key=f074d209b5eb005ed2a8cfdf5e38676f"
+    ];
 
-        function submitTask() {
-            const selectedType = document.querySelector('input[name="task_type"]:checked').value;
+    let completedTasks = JSON.parse(localStorage.getItem('completed_tasks') || '[]');
+    let currentTaskIndex = null;
+    let leaveTimestamp = null;
+
+    function renderTasks() {
+      const container = document.getElementById('taskList');
+      container.innerHTML = '';
+
+      for (let i = 0; i < 10; i++) {
+        const isDone = completedTasks.includes(i);
+        const card = document.createElement('div');
+        card.className = 'task-card';
+        card.innerHTML = `
+          <div class="task-info">
+            <div class="task-name">টাস্ক #${i + 1} (২০ সেকেন্ড থাকুন)</div>
+            <div class="task-reward">+৳৫.০০ রিওয়ার্ড</div>
+          </div>
+          <button class="btn-task ${isDone ? 'btn-completed' : ''}" 
+                  ${isDone ? 'disabled' : ''} 
+                  onclick="startTask(${i})">
+            ${isDone ? 'সম্পন্ন ✅' : 'কাজ লিঙ্ক'}
+          </button>
+        `;
+        container.appendChild(card);
+      }
+    }
+
+    function startTask(index) {
+      currentTaskIndex = index;
+      leaveTimestamp = Date.now();
+      showStatus("⏳ লিংকে নিয়ে যাওয়া হচ্ছে... ওয়েবসাইটে কমপক্ষে ২০ সেকেন্ড থাকুন!", "#0284c7");
+      
+      const targetUrl = adLinks[index] || adLinks[0];
+      if (tg && tg.openLink) {
+        tg.openLink(targetUrl);
+      } else {
+        window.open(targetUrl, '_blank');
+      }
+    }
+
+    // Checking if user stayed on ad website for 20 seconds
+    function checkTaskCompletion() {
+      if (currentTaskIndex === null || leaveTimestamp === null) return;
+
+      const elapsedSeconds = Math.floor((Date.now() - leaveTimestamp) / 1000);
+      
+      if (elapsedSeconds >= 20) {
+        if (!completedTasks.includes(currentTaskIndex)) {
+          completedTasks.push(currentTaskIndex);
+          localStorage.setItem('completed_tasks', JSON.stringify(completedTasks));
+          
+          showStatus("🎉 কাজ সফল হয়েছে! ৳৫ ব্যালেন্স যোগ হয়েছে।", "#15803d");
+
+          if (tg) {
             tg.sendData(JSON.stringify({
-                status: "success",
-                task_type: selectedType
+              status: "success",
+              task_index: currentTaskIndex,
+              task_type: "normal",
+              reward: 5.0
             }));
+          }
         }
-    </script>
+      } else {
+        showStatus(`❌ আপনি মাত্র ${elapsedSeconds} সেকেন্ড ছিলেন! ২০ সেকেন্ডের আগে ব্যাক করায় কাজ বাতিল করা হয়েছে।`, "#dc2626");
+      }
+
+      currentTaskIndex = null;
+      leaveTimestamp = null;
+      renderTasks();
+    }
+
+    window.addEventListener('focus', checkTaskCompletion);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') checkTaskCompletion();
+    });
+
+    function showStatus(msg, bg) {
+      const box = document.getElementById('statusBox');
+      box.style.display = 'block';
+      box.style.background = bg;
+      box.innerHTML = msg;
+    }
+
+    renderTasks();
+  </script>
 </body>
 </html>
