@@ -27,7 +27,7 @@
         }
         .badge { background-color: #0284c7; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
 
-        .section-title { font-size: 14px; font-weight: bold; margin-bottom: 10px; color: #cbd5e1; }
+        .section-title { font-size: 14px; font-weight: bold; margin-bottom: 10px; color: #cbd5e1; border-bottom: 1px solid #334155; padding-bottom: 5px; margin-top: 15px; }
         .task-list { display: flex; flex-direction: column; gap: 8px; }
         .task-card {
             background-color: #1e293b; border-radius: 8px; padding: 10px 14px;
@@ -39,8 +39,16 @@
             background-color: #2563eb; color: white; border: none; padding: 8px 14px;
             border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; text-decoration: none; display: inline-block;
         }
-        .btn-disabled { background-color: #475569; color: #94a3b8; cursor: not-allowed; pointer-events: none; }
-        .btn-done { background-color: #166534; color: #86efac; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; }
+        .btn-disabled { background-color: #dc2626; color: #ffffff; cursor: not-allowed; }
+
+        /* History Table / List */
+        .history-card {
+            background-color: #1e293b; border-radius: 8px; padding: 10px;
+            margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 12px;
+        }
+        .status-pending { color: #facc15; font-weight: bold; background: #422006; padding: 3px 8px; border-radius: 4px; }
+        .status-approved { color: #4ade80; font-weight: bold; background: #052e16; padding: 3px 8px; border-radius: 4px; }
+        .status-rejected { color: #f87171; font-weight: bold; background: #450a0a; padding: 3px 8px; border-radius: 4px; }
 
         /* Pop-up Overlay */
         .modal-overlay {
@@ -69,7 +77,7 @@
     <!-- ১. নোটিশ -->
     <div class="notice-box">
         ⚠️ <b>জরুরি নোটিশ:</b><br>
-        ভিপ্রিএন (VPN) ব্যবহার করে কাজ করলে অ্যাকাউন্ট পারমানент ব্লক করা হবে। সততার সাথে কাজ সম্পন্ন করুন।
+        ভিপ্রিএন (VPN) ব্যবহার করে কাজ করলে অ্যাকাউন্ট পারমানেন্ট ব্লক করা হবে। ওয়েবসাইট থেকে বের হলে টাইমার বন্ধ থাকবে।
     </div>
 
     <!-- ২. কাজের নিয়মাবলী -->
@@ -84,7 +92,13 @@
     <div class="section-title">📋 কাজের তালিকা (Serial Tasks)</div>
     <div class="task-list" id="task-container"></div>
 
-    <!-- ৪. পপ-আপ (Pop-up) -->
+    <!-- ৪. হিস্টোরি তালিকা -->
+    <div class="section-title">📜 কাজের হিস্টোরি (Task History)</div>
+    <div class="task-list" id="history-container">
+        <p style="font-size: 12px; color: #94a3b8; text-align: center;">এখনো কোনো কাজ জমা দেওয়া হয়নি</p>
+    </div>
+
+    <!-- ৫. পপ-আপ (Pop-up) -->
     <div class="modal-overlay" id="popup-modal">
         <div class="modal-box">
             <h3>🎉 ২০ সেকেন্ড সম্পন্ন হয়েছে!</h3>
@@ -118,24 +132,65 @@
         let activeTaskId = null;
         let timeLeft = 20;
         let timerInterval = null;
-        let isBrowserActive = true;
+        let isTabActive = true;
 
-        document.addEventListener("visibilitychange", function() {
-            isBrowserActive = !document.hidden;
+        // লোড হওয়া সাবমিটেড টাস্ক ট্র্যাক
+        let completedTaskIds = JSON.parse(localStorage.getItem("completed_tasks") || "[]");
+        let taskHistory = JSON.parse(localStorage.getItem("task_history") || "[]");
+
+        // উইন্ডো ফোকাস ট্র্যাকিং (ওয়েবসাইট ছেড়ে গেলে কাউন্টডাউন বন্ধ করা)
+        window.addEventListener("focus", () => { isTabActive = true; });
+        window.addEventListener("blur", () => { isTabActive = false; });
+        document.addEventListener("visibilitychange", () => {
+            isTabActive = !document.hidden;
         });
 
-        const container = document.getElementById("task-container");
-        adLinks.forEach((link, idx) => {
-            const id = idx + 1;
-            container.innerHTML += `
-                <div class="task-card">
-                    <div class="task-name">টাস্ক #${id} (২০ সেকেন্ড থাকুন)</div>
-                    <div id="btn-area-${id}">
-                        <a href="${link}" target="_blank" class="btn-link" onclick="startTimer(${id})">কাজ লিংক</a>
+        function renderTasks() {
+            const container = document.getElementById("task-container");
+            container.innerHTML = "";
+
+            let remainingCount = 0;
+            adLinks.forEach((link, idx) => {
+                const id = idx + 1;
+                if (!completedTaskIds.includes(id)) {
+                    remainingCount++;
+                    container.innerHTML += `
+                        <div class="task-card" id="task-card-${id}">
+                            <div class="task-name">টাস্ক #${id} (২০ সেকেন্ড থাকুন)</div>
+                            <div id="btn-area-${id}">
+                                <a href="${link}" target="_blank" class="btn-link" onclick="startTimer(${id})">কাজ লিংক</a>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            if (remainingCount === 0) {
+                container.innerHTML = `<p style="font-size: 13px; color: #4ade80; text-align: center; padding: 10px;">🎉 আপনার সকল কাজ শেষ!</p>`;
+            }
+        }
+
+        function renderHistory() {
+            const historyContainer = document.getElementById("history-container");
+            if (taskHistory.length === 0) {
+                historyContainer.innerHTML = `<p style="font-size: 12px; color: #94a3b8; text-align: center;">এখনো কোনো কাজ জমা দেওয়া হয়নি</p>`;
+                return;
+            }
+
+            historyContainer.innerHTML = "";
+            taskHistory.slice().reverse().forEach(item => {
+                let statusBadge = '<span class="status-pending">পেন্ডিং ⏳</span>';
+                if (item.status === "Approved") statusBadge = '<span class="status-approved">অনুমোদিত ✅</span>';
+                if (item.status === "Rejected") statusBadge = '<span class="status-rejected">বাতিল ❌</span>';
+
+                historyContainer.innerHTML += `
+                    <div class="history-card">
+                        <div><b>টাস্ক #${item.task_id}</b> (${item.type_name})</div>
+                        <div>${statusBadge}</div>
                     </div>
-                </div>
-            `;
-        });
+                `;
+            });
+        }
 
         function startTimer(id) {
             activeTaskId = id;
@@ -145,14 +200,19 @@
             if (timerInterval) clearInterval(timerInterval);
 
             timerInterval = setInterval(() => {
-                if (isBrowserActive) {
+                if (isTabActive) {
                     timeLeft--;
-                    btnArea.innerHTML = `<button class="btn-link btn-disabled">অপেক্ষা করুন (${timeLeft}s)</button>`;
+                    if (btnArea) {
+                        btnArea.innerHTML = `<button class="btn-link btn-disabled">অপেক্ষা করুন (${timeLeft}s)</button>`;
+                    }
 
                     if (timeLeft <= 0) {
                         clearInterval(timerInterval);
-                        btnArea.innerHTML = `<span class="btn-done">সম্পন্ন  ✔️</span>`;
                         document.getElementById("popup-modal").style.display = "flex";
+                    }
+                } else {
+                    if (btnArea) {
+                        btnArea.innerHTML = `<button class="btn-link btn-disabled">পজড! ওয়েবসাইটে থাকুন (${timeLeft}s)</button>`;
                     }
                 }
             }, 1000);
@@ -160,20 +220,44 @@
 
         function submitToBot() {
             const selectedType = document.getElementById("task-type").value;
+            let typeName = "নরমাল এড";
+            let reward = 5.0;
+
+            if (selectedType === "spin") { typeName = "স্পিন টাস্ক"; reward = 8.0; }
+            if (selectedType === "app") { typeName = "অ্যাপ ডাউনলোড"; reward = 10.0; }
+
             const payload = {
                 status: "success",
                 task_id: activeTaskId,
-                task_type: selectedType
+                task_type: selectedType,
+                type_name: typeName,
+                reward: reward
             };
+
+            // লোকালস্টোরেজে ডাটা আপডেট
+            completedTaskIds.push(activeTaskId);
+            localStorage.setItem("completed_tasks", JSON.stringify(completedTaskIds));
+
+            taskHistory.push({
+                task_id: activeTaskId,
+                type_name: typeName,
+                status: "Pending"
+            });
+            localStorage.setItem("task_history", JSON.stringify(taskHistory));
+
+            document.getElementById("popup-modal").style.display = "none";
+            renderTasks();
+            renderHistory();
 
             if (tg && tg.sendData) {
                 tg.sendData(JSON.stringify(payload));
-                tg.close();
             } else {
-                alert("ডাটা জমা হয়েছে!");
-                document.getElementById("popup-modal").style.display = "none";
+                alert("কাজ জমা দেওয়া হয়েছে!");
             }
         }
+
+        renderTasks();
+        renderHistory();
     </script>
 </body>
 </html>
