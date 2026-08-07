@@ -13,13 +13,13 @@ TOKEN = "8906908546:AAHzB9xXXaseFaBUl_nDec5EmbCgYLCKfVs"
 PAYMENT_CHANNEL_URL = "https://t.me/Student_Earning_Payment_chanel"
 WEB_APP_URL = "https://student-earning-gray.vercel.app"
 
-# 👑 সেট করা অ্যাডমিন আইডি
+# 👑 অ্যাডমিন তথ্য (আইডি এবং ইউজারনেম দুটোই যুক্ত করা হলো)
 ADMIN_ID = 1892149781  
+ADMIN_USERNAME = "ariyan_maruf009"  # @ ছাড়া
 
 DB_FILE = "users.json"
 PENDING_FILE = "pending_tasks.json"
 
-# Web Server for keeping bot alive
 class SimpleHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -36,7 +36,6 @@ Thread(target=run_server, daemon=True).start()
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-# JSON Persistence Helpers
 def load_data(file_name):
     if os.path.exists(file_name):
         try:
@@ -73,6 +72,12 @@ def get_user_data(user_id_str, first_name="", referrer_id=None):
         save_data(DB_FILE, users_db)
     return users_db[user_id_str]
 
+# 🔍 অ্যাডমিন ভেরিফিকেশন হেল্পার
+def is_admin(user):
+    is_id_match = (user.id == ADMIN_ID)
+    is_username_match = (user.username and user.username.lower() == ADMIN_USERNAME.lower())
+    return is_id_match or is_username_match
+
 # ⏰ সকাল ৬:০০ AM অটোমেটিক রিসেট ফাংশন
 async def daily_reset_task(app: Application):
     logging.info("Running Daily Reset at 6:00 AM...")
@@ -89,14 +94,12 @@ async def daily_reset_task(app: Application):
                 pass
     save_data(DB_FILE, users_db)
 
-# 🔄 পোস্ট-ইনিশিয়ালাইজেশনে সিডিউলার শুরু
 async def post_init(app: Application) -> None:
     tz = pytz.timezone('Asia/Dhaka')
     scheduler = AsyncIOScheduler(timezone=tz)
     scheduler.add_job(daily_reset_task, 'cron', hour=6, minute=0, args=[app])
     scheduler.start()
 
-# Telegram Command Handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id_str = str(user.id)
@@ -123,9 +126,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
-        await update.message.reply_text("❌ আপনি এই কমান্ডটি ব্যবহারের জন্য অনুমোদিত নন।")
+    user = update.effective_user
+    
+    # ID বা Username যেকোনো একটি মিললেই পারমিশন পাবে
+    if not is_admin(user):
+        await update.message.reply_text(f"❌ আপনি এই কমান্ডটি ব্যবহারের জন্য অনুমোদিত নন।\n(Your ID: `{user.id}`)", parse_mode="Markdown")
         return
 
     total_users = len(users_db)
@@ -144,8 +149,9 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    user_id_str = str(query.from_user.id)
-    u = get_user_data(user_id_str, query.from_user.first_name)
+    user = query.from_user
+    user_id_str = str(user.id)
+    u = get_user_data(user_id_str, user.first_name)
 
     if query.data == "check_join":
         main_keyboard = [
@@ -183,7 +189,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data['waiting_bkash'] = True
 
     elif query.data == "review_pending":
-        if query.from_user.id != ADMIN_ID:
+        if not is_admin(user):
             return
         if not pending_db:
             await query.message.reply_text("✅ কোন পেন্ডিং কাজ জমা নেই!")
@@ -210,7 +216,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif query.data.startswith("app_"):
-        if query.from_user.id != ADMIN_ID:
+        if not is_admin(user):
             return
         task_id = query.data.replace("app_", "")
         if task_id in pending_db:
@@ -238,7 +244,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(f"✅ Task `{task_id}` Approved and Balance Added!")
 
     elif query.data.startswith("rej_"):
-        if query.from_user.id != ADMIN_ID:
+        if not is_admin(user):
             return
         task_id = query.data.replace("rej_", "")
         if task_id in pending_db:
