@@ -13,9 +13,8 @@ TOKEN = "8906908546:AAHzB9xXXaseFaBUl_nDec5EmbCgYLCKfVs"
 PAYMENT_CHANNEL_URL = "https://t.me/Student_Earning_Payment_chanel"
 WEB_APP_URL = "https://student-earning-gray.vercel.app"
 
-# 👑 অ্যাডমিন তথ্য (আইডি এবং ইউজারনেম দুটোই যুক্ত করা হলো)
 ADMIN_ID = 1892149781  
-ADMIN_USERNAME = "ariyan_maruf009"  # @ ছাড়া
+ADMIN_USERNAME = "ariyan_maruf009"
 
 DB_FILE = "users.json"
 PENDING_FILE = "pending_tasks.json"
@@ -62,37 +61,41 @@ def get_user_data(user_id_str, first_name="", referrer_id=None):
             "balance": 0.0,
             "completed_today": 0,
             "total_completed": 0,
+            "referrals": [], # রেফার করা ইউজারদের আইডি লিস্ট
             "referred_by": str(referrer_id) if referrer_id else None,
-            "referral_rewarded": False,
             "joined_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
+        if referrer_id and str(referrer_id) in users_db:
+            if user_id_str not in users_db[str(referrer_id)].get("referrals", []):
+                users_db[str(referrer_id)].setdefault("referrals", []).append(user_id_str)
         save_data(DB_FILE, users_db)
     elif first_name and users_db[user_id_str].get("name") != first_name:
         users_db[user_id_str]["name"] = first_name
         save_data(DB_FILE, users_db)
     return users_db[user_id_str]
 
-# 🔍 অ্যাডমিন ভেরিফিকেশন হেল্পার
 def is_admin(user):
     is_id_match = (user.id == ADMIN_ID)
     is_username_match = (user.username and user.username.lower() == ADMIN_USERNAME.lower())
     return is_id_match or is_username_match
 
-# ⏰ সকাল ৬:০০ AM অটোমেটিক রিসেট ফাংশন
+# ⏰ অটোমেটিক বা ম্যানুয়াল কাজ রিলিজ ফানশন
+async def release_tasks_for_all(app: Application, manual=False):
+    count = 0
+    for uid, udata in users_db.items():
+        udata["completed_today"] = 0
+        count += 1
+        try:
+            msg = "🚀 **নতুন কাজ রিলিজ হয়েছে!**\n\nঅ্যাডমিন নতুন কাজ রিলিজ করেছেন। দ্রুত ১০টি কাজ সম্পন্ন করুন!" if manual else "🌅 **সকাল ৬:০০ AM আপডেট!**\n\nআপনার আজকের ১০টি নতুন কাজ চলে এসেছে। কাজ সম্পন্ন করুন এবং ইনকাম করুন!"
+            await app.bot.send_message(chat_id=int(uid), text=msg, parse_mode="Markdown")
+        except Exception:
+            pass
+    save_data(DB_FILE, users_db)
+    return count
+
 async def daily_reset_task(app: Application):
     logging.info("Running Daily Reset at 6:00 AM...")
-    for uid, udata in users_db.items():
-        if udata.get("completed_today", 0) >= 10:
-            udata["completed_today"] = 0
-            try:
-                await app.bot.send_message(
-                    chat_id=int(uid),
-                    text="🌅 **সকাল ৬:০০ AM আপডেট!**\n\nআপনার আজকের ১০টি নতুন কাজ চলে এসেছে। দ্রুত কাজ শুরু করুন এবং ইনকাম করুন!",
-                    parse_mode="Markdown"
-                )
-            except Exception:
-                pass
-    save_data(DB_FILE, users_db)
+    await release_tasks_for_all(app, manual=False)
 
 async def post_init(app: Application) -> None:
     tz = pytz.timezone('Asia/Dhaka')
@@ -127,10 +130,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    
-    # ID বা Username যেকোনো একটি মিললেই পারমিশন পাবে
     if not is_admin(user):
-        await update.message.reply_text(f"❌ আপনি এই কমান্ডটি ব্যবহারের জন্য অনুমোদিত নন।\n(Your ID: `{user.id}`)", parse_mode="Markdown")
+        await update.message.reply_text(f"❌ আপনি এই কমান্ডটি ব্যবহারের জন্য অনুমোদিত নন।")
         return
 
     total_users = len(users_db)
@@ -140,10 +141,14 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👑 **অ্যাডমিন কন্ট্রোল প্যানেল**\n\n"
         f"👥 মোট রেজিস্টার্ড ইউজার: `{total_users}` জন\n"
         f"⏳ পেন্ডিং কাজ জমা আছে: `{pending_count}` টি\n\n"
-        f"পেন্ডিং কাজসমূহ রিভিউ ও কনফার্ম করতে নিচের বাটনে ক্লিক করুন:"
+        f"নিচের বাটনগুলো থেকে অপশন সিলেক্ট করুন:"
     )
     
-    keyboard = [[InlineKeyboardButton("📋 পেন্ডিং কাজ রিভিউ করুন", callback_data="review_pending")]]
+    keyboard = [
+        [InlineKeyboardButton("📋 পেন্ডিং কাজ রিভিউ করুন", callback_data="review_pending")],
+        [InlineKeyboardButton("👥 ইউজার তালিকা ও তথ্য", callback_data="list_users")],
+        [InlineKeyboardButton("🚀 এক ক্লিকে সবার কাজ রিলিজ করুন", callback_data="release_all_now")]
+    ]
     await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -173,10 +178,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "referral":
         bot_username = (await context.bot.get_me()).username
         ref_link = f"https://t.me/{bot_username}?start={user_id_str}"
+        total_refs = len(u.get("referrals", []))
+        
         text = (
             f"👥 **রেফারেল প্রোগ্রাম**\n\n"
-            f"আপনার রেফারেল লিংক:\n`{ref_link}`\n\n"
-            f"🎁 **নিয়ম:** আপনার লিংকে কেউ জয়েন করে **২টি কাজ** সম্পন্ন করলেই আপনি পাবেন **৳১০** বোনাস!"
+            f"🔗 **আপনার রেফার লিংক:**\n`{ref_link}`\n\n"
+            f"📊 **আপনার রেফার হিস্ট্রি:**\n"
+            f"👥 মোট রেফার করেছেন: `{total_refs}` জন\n\n"
+            f"🎁 **নিয়ম:** আপনার রেফার লিংকে জয়েন করে কাজ করলে আকর্ষণীয় বোনাস পাবেন!"
         )
         await query.message.reply_text(text, parse_mode="Markdown")
 
@@ -187,6 +196,27 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await query.message.reply_text("📱 আপনার **বিকাশ (bKash)** নম্বরটি লিখুন:")
             context.user_data['waiting_bkash'] = True
+
+    elif query.data == "list_users":
+        if not is_admin(user):
+            return
+        
+        msg = "📦 **ইউজার তালিকা ও পেন্ডিং স্ট্যাটাস:**\n\n"
+        for uid, udata in users_db.items():
+            user_pending = sum(1 for t in pending_db.values() if t["user_id"] == uid)
+            msg += f"👤 **ইউজার:** {udata.get('name', 'N/A')}\n"
+            msg += f"🆔 **ID:** `{uid}`\n"
+            msg += f"💰 **ব্যালেন্স:** ৳{udata.get('balance', 0.0)}\n"
+            msg += f"⏳ **পেন্ডিং কাজ:** {user_pending}টি | **আজকের কাজ:** {udata.get('completed_today', 0)}/১০\n"
+            msg += "-----------------------------------\n"
+        
+        await query.message.reply_text(msg, parse_mode="Markdown")
+
+    elif query.data == "release_all_now":
+        if not is_admin(user):
+            return
+        count = await release_tasks_for_all(context.application, manual=True)
+        await query.message.reply_text(f"✅ সফলভাবে মোট `{count}` জন ইউজারের ১০টি কাজ রিলিজ করা হয়েছে এবং নোটিফিকেশন পাঠানো হয়েছে!", parse_mode="Markdown")
 
     elif query.data == "review_pending":
         if not is_admin(user):
