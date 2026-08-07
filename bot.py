@@ -1,23 +1,31 @@
 import os
 import logging
 import json
+from datetime import datetime
 from threading import Thread
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import pytz
 
 TOKEN = "8906908546:AAHzB9xXXaseFaBUl_nDec5EmbCgYLCKfVs"
 PAYMENT_CHANNEL_URL = "https://t.me/Student_Earning_Payment_chanel"
 WEB_APP_URL = "https://student-earning-gray.vercel.app"
-DB_FILE = "users.json"
 
-# Web Server
+# 👑 সেট করা অ্যাডমিন আইডি
+ADMIN_ID = 1892149781  
+
+DB_FILE = "users.json"
+PENDING_FILE = "pending_tasks.json"
+
+# Web Server for keeping bot alive
 class SimpleHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-        self.wfile.write(b"Bot is Running Perfectly!")
+        self.wfile.write(b"Student Earning Bot is Running!")
 
 def run_server():
     port = int(os.environ.get("PORT", 8080))
@@ -28,37 +36,60 @@ Thread(target=run_server, daemon=True).start()
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-# Persistent JSON Database Handler
-def load_db():
-    if os.path.exists(DB_FILE):
+# JSON Persistence Helpers
+def load_data(file_name):
+    if os.path.exists(file_name):
         try:
-            with open(DB_FILE, "r") as f:
+            with open(file_name, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return {}
     return {}
 
-def save_db(db):
+def save_data(file_name, data):
     try:
-        with open(DB_FILE, "w") as f:
-            json.dump(db, f, indent=4)
+        with open(file_name, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
     except Exception as e:
-        logging.error(f"Error saving DB: {e}")
+        logging.error(f"Error saving {file_name}: {e}")
 
-users_db = load_db()
+users_db = load_data(DB_FILE)
+pending_db = load_data(PENDING_FILE)
 
-def get_user_data(user_id_str, referrer_id=None):
+def get_user_data(user_id_str, first_name="", referrer_id=None):
     if user_id_str not in users_db:
         users_db[user_id_str] = {
+            "name": first_name,
             "balance": 0.0,
             "completed_today": 0,
             "total_completed": 0,
             "referred_by": str(referrer_id) if referrer_id else None,
-            "referral_rewarded": False
+            "referral_rewarded": False,
+            "joined_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
-        save_db(users_db)
+        save_data(DB_FILE, users_db)
+    elif first_name and users_db[user_id_str].get("name") != first_name:
+        users_db[user_id_str]["name"] = first_name
+        save_data(DB_FILE, users_db)
     return users_db[user_id_str]
 
+# ⏰ সকাল ৬:০০ AM অটোমেটিক রিসেট ফাংশন
+async def daily_reset_task(app: Application):
+    logging.info("Running Daily Reset at 6:00 AM...")
+    for uid, udata in users_db.items():
+        if udata.get("completed_today", 0) >= 10:
+            udata["completed_today"] = 0
+            try:
+                await app.bot.send_message(
+                    chat_id=int(uid),
+                    text="🌅 **সকাল ৬:০০ AM আপডেট!**\n\nআপনার আজকের ১০টি নতুন কাজ চলে এসেছে। দ্রুত কাজ শুরু করুন এবং ইনকাম করুন!",
+                    parse_mode="Markdown"
+                )
+            except Exception:
+                pass
+    save_data(DB_FILE, users_db)
+
+# Telegram Command Handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id_str = str(user.id)
@@ -72,23 +103,42 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except ValueError:
             pass
 
-    get_user_data(user_id_str, referrer_id)
+    get_user_data(user_id_str, user.first_name, referrer_id)
 
     keyboard = [
         [InlineKeyboardButton("📢 চ্যানেলে জয়েন করুন", url=PAYMENT_CHANNEL_URL)],
         [InlineKeyboardButton("✅ জয়েন করেছি, চেক করুন", callback_data="check_join")]
     ]
     await update.message.reply_text(
-        f"স্বাগতম **{user.first_name}** Student Earning-এ!\n\nকাজ করতে আগে পেমেন্ট চ্যানেলে জয়েন করুন:",
+        f"স্বাগতম **{user.first_name}** Student Earning-এ!\n\nকাজ করতে আগে আমাদের অফিসিয়াল চ্যানেলে জয়েন করুন:",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
+
+async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id != ADMIN_ID:
+        await update.message.reply_text("❌ আপনি এই কমান্ডটি ব্যবহারের জন্য অনুমোদিত নন।")
+        return
+
+    total_users = len(users_db)
+    pending_count = len(pending_db)
+    
+    text = (
+        f"👑 **অ্যাডমিন কন্ট্রোল প্যানেল**\n\n"
+        f"👥 মোট রেজিস্টার্ড ইউজার: `{total_users}` জন\n"
+        f"⏳ পেন্ডিং কাজ জমা আছে: `{pending_count}` টি\n\n"
+        f"পেন্ডিং কাজসমূহ রিভিউ ও কনফার্ম করতে নিচের বাটনে ক্লিক করুন:"
+    )
+    
+    keyboard = [[InlineKeyboardButton("📋 পেন্ডিং কাজ রিভিউ করুন", callback_data="review_pending")]]
+    await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     user_id_str = str(query.from_user.id)
-    u = get_user_data(user_id_str)
+    u = get_user_data(user_id_str, query.from_user.first_name)
 
     if query.data == "check_join":
         main_keyboard = [
@@ -99,7 +149,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("✅ ভেরিফিকেশন সফল! নিচের বাটন থেকে কাজ করুন:", reply_markup=InlineKeyboardMarkup(main_keyboard))
 
     elif query.data == "balance":
-        await query.message.reply_text(f"💰 বর্তমান ব্যালেন্স: ৳{u['balance']:.1f}\n🎯 আজকের কাজ: {u['completed_today']}/১০")
+        remains = max(0, 10 - u['completed_today'])
+        await query.message.reply_text(
+            f"💰 **বর্তমান ব্যালেন্স:** ৳{u['balance']:.1f}\n"
+            f"🎯 **আজকের সম্পূর্ণ কাজ:** {u['completed_today']}/১০\n"
+            f"📌 **বাকি কাজ:** {remains}টি",
+            parse_mode="Markdown"
+        )
 
     elif query.data == "referral":
         bot_username = (await context.bot.get_me()).username
@@ -114,14 +170,78 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == "withdraw":
         if u['balance'] < 500:
             await query.answer("❌ সর্বনিম্ন উইথড্র ৳৫০০!", show_alert=True)
-            await query.message.reply_text(f"❌ আপনার ব্যালেন্স ৳{u['balance']:.1f}। সর্বনিম্ন ৳৫০০ হলে বিকাশ নম্বরে টাকা তুলতে পারবেন।")
+            await query.message.reply_text(f"❌ আপনার বর্তমান ব্যালেন্স ৳{u['balance']:.1f}। সর্বনিম্ন ৳৫০০ হলে বিকাশ নম্বরে টাকা তুলতে পারবেন।")
         else:
             await query.message.reply_text("📱 আপনার **বিকাশ (bKash)** নম্বরটি লিখুন:")
             context.user_data['waiting_bkash'] = True
 
+    elif query.data == "review_pending":
+        if query.from_user.id != ADMIN_ID:
+            return
+        if not pending_db:
+            await query.message.reply_text("✅ কোন পেন্ডিং কাজ জমা নেই!")
+            return
+
+        task_id, tdata = list(pending_db.items())[0]
+        p_uid = tdata["user_id"]
+        p_user = users_db.get(p_uid, {})
+        
+        btn = [
+            [
+                InlineKeyboardButton("✅ Approve (কনফার্ম)", callback_data=f"app_{task_id}"),
+                InlineKeyboardButton("❌ Reject", callback_data=f"rej_{task_id}")
+            ]
+        ]
+        await query.message.reply_text(
+            f"📌 **কাজ রিভিউ:**\n"
+            f"👤 ইউজার: {p_user.get('name', 'N/A')} (`{p_uid}`)\n"
+            f"📝 কাজের ধরণ: {tdata.get('type_name')}\n"
+            f"💵 রিওয়ার্ড: ৳{tdata.get('reward')}\n"
+            f"🕒 সময়: {tdata.get('time')}",
+            reply_markup=InlineKeyboardMarkup(btn),
+            parse_mode="Markdown"
+        )
+
+    elif query.data.startswith("app_"):
+        if query.from_user.id != ADMIN_ID:
+            return
+        task_id = query.data.replace("app_", "")
+        if task_id in pending_db:
+            tdata = pending_db.pop(task_id)
+            save_data(PENDING_FILE, pending_db)
+            
+            p_uid = tdata["user_id"]
+            reward = tdata["reward"]
+            
+            pu = get_user_data(p_uid)
+            pu["balance"] += reward
+            pu["completed_today"] += 1
+            pu["total_completed"] += 1
+            save_data(DB_FILE, users_db)
+
+            try:
+                await context.bot.send_message(
+                    chat_id=int(p_uid),
+                    text=f"🎉 **অভিনন্দন!**\n\nআপনার জমা দেওয়া কাজটি সফলভাবে **কনফার্ম** করা হয়েছে! আপনার ব্যালেন্সে **৳{reward}** যোগ হয়েছে।\n\n💰 **বর্তমান ব্যালেন্স:** ৳{pu['balance']:.1f}\n\nআরো কাজ করুন এবং বেশি বেশি ইনকাম করুন! 🚀",
+                    parse_mode="Markdown"
+                )
+            except Exception:
+                pass
+
+            await query.edit_message_text(f"✅ Task `{task_id}` Approved and Balance Added!")
+
+    elif query.data.startswith("rej_"):
+        if query.from_user.id != ADMIN_ID:
+            return
+        task_id = query.data.replace("rej_", "")
+        if task_id in pending_db:
+            tdata = pending_db.pop(task_id)
+            save_data(PENDING_FILE, pending_db)
+            await query.edit_message_text(f"❌ Task `{task_id}` Rejected!")
+
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id_str = str(update.effective_user.id)
-    u = get_user_data(user_id_str)
+    u = get_user_data(user_id_str, update.effective_user.first_name)
     
     if not update.message or not update.message.web_app_data:
         return
@@ -134,7 +254,7 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data.get("status") == "success":
         if u["completed_today"] >= 10:
-            await update.message.reply_text("❌ আপনার আজকের ১০টি কাজের লিমিট শেষ!")
+            await update.message.reply_text("❌ আপনার আজকের ১০টি কাজের লিমিট শেষ! আগামীকাল সকাল ৬:০০ AM-এ আবার নতুন কাজ পাবেন।")
             return
 
         task_type = data.get("task_type", "normal")
@@ -148,35 +268,21 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reward = 10.0
             type_name = "অ্যাপ ডাউনলোড / বেটিং এড"
 
-        # Update User Records
-        u["completed_today"] += 1
-        u["total_completed"] += 1
-        u["balance"] += reward
-
-        # Check Referral Rewards
-        referrer_id_str = u.get("referred_by")
-        if referrer_id_str and not u.get("referral_rewarded", False):
-            if u["total_completed"] >= 2:
-                u["referral_rewarded"] = True
-                ref_user = get_user_data(referrer_id_str)
-                ref_user["balance"] += 10.0
-                try:
-                    await context.bot.send_message(
-                        chat_id=int(referrer_id_str),
-                        text=f"🎉 **রেফারেল বোনাস!**\nআপনার ইনভাইট করা ইউজার ২টি কাজ শেষ করায় আপনি **৳১০** বোনাস পেয়েছেন!",
-                        parse_mode="Markdown"
-                    )
-                except Exception:
-                    pass
-
-        save_db(users_db)
+        task_id = f"task_{int(datetime.now().timestamp())}_{user_id_str}"
+        
+        pending_db[task_id] = {
+            "user_id": user_id_str,
+            "task_type": task_type,
+            "type_name": type_name,
+            "reward": reward,
+            "time": datetime.now().strftime("%I:%M %p")
+        }
+        save_data(PENDING_FILE, pending_db)
 
         await update.message.reply_text(
-            f"🎉 **কাজ জমা সফল হয়েছে!**\n"
+            f"📥 **কাজটি জমা নেওয়া হয়েছে!**\n\n"
             f"📌 ধরণ: {type_name}\n"
-            f"➕ যোগ হয়েছে: ৳{reward}\n"
-            f"💰 বর্তমান মোট ব্যালেন্স: ৳{u['balance']:.1f}\n"
-            f"🎯 আজকের মোট কাজ সম্পন্ন: {u['completed_today']}/১০",
+            f"⏳ রিভিউ অ্যাডমিন কনফার্ম করলেই আপনার অ্যাকাউন্টে **৳{reward}** জমা হবে।",
             parse_mode="Markdown"
         )
 
@@ -188,7 +294,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         current_bal = u['balance']
         
         u['balance'] = 0.0
-        save_db(users_db)
+        save_data(DB_FILE, users_db)
         
         context.user_data['waiting_bkash'] = False
         await update.message.reply_text(
@@ -200,7 +306,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = Application.builder().token(TOKEN).build()
     
+    # Cron Scheduler setup (At 6:00 AM BD Time)
+    tz = pytz.timezone('Asia/Dhaka')
+    scheduler = AsyncIOScheduler(timezone=tz)
+    scheduler.add_job(daily_reset_task, 'cron', hour=6, minute=0, args=[app])
+    scheduler.start()
+
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("admin", admin_panel))
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
