@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Earning Tasks</title>
-    <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
@@ -41,16 +40,12 @@
         }
         .btn-disabled { background-color: #dc2626; color: #ffffff; cursor: not-allowed; }
 
-        /* History Table / List */
         .history-card {
             background-color: #1e293b; border-radius: 8px; padding: 10px;
             margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 12px;
         }
         .status-pending { color: #facc15; font-weight: bold; background: #422006; padding: 3px 8px; border-radius: 4px; }
-        .status-approved { color: #4ade80; font-weight: bold; background: #052e16; padding: 3px 8px; border-radius: 4px; }
-        .status-rejected { color: #f87171; font-weight: bold; background: #450a0a; padding: 3px 8px; border-radius: 4px; }
 
-        /* Pop-up Overlay */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.85); display: none;
@@ -74,13 +69,11 @@
 </head>
 <body>
 
-    <!-- ১. নোটিশ -->
     <div class="notice-box">
         ⚠️ <b>জরুরি নোটিশ:</b><br>
-        ভিপ্রিএন (VPN) ব্যবহার করে কাজ করলে অ্যাকাউন্ট পারমানেন্ট ব্লক করা হবে। ওয়েবসাইট থেকে বের হলে টাইমার বন্ধ থাকবে।
+        ভিপ্রিএন (VPN) ব্যবহার করে কাজ করলে অ্যাকাউন্ট পারমানেন্ট ব্লক করা হবে। ওয়েবসাইট থেকে বের হয়ে গেলে সময় গণনা বন্ধ থাকবে!
     </div>
 
-    <!-- ২. কাজের নিয়মাবলী -->
     <div class="rules-card">
         <div class="rules-header">🎯 আজকের কাজের নিয়মাবলী</div>
         <div class="rule-item"><span>📲 অ্যাপ ডাউনলোড / বেটিং এড</span><span class="badge">৳১০</span></div>
@@ -88,17 +81,12 @@
         <div class="rule-item"><span>📜 নরমাল এড স্ক্রলিং (২০ সে.)</span><span class="badge">৳৫</span></div>
     </div>
 
-    <!-- ৩. কাজের তালিকা -->
     <div class="section-title">📋 কাজের তালিকা (Serial Tasks)</div>
     <div class="task-list" id="task-container"></div>
 
-    <!-- ৪. হিস্টোরি তালিকা -->
     <div class="section-title">📜 কাজের হিস্টোরি (Task History)</div>
-    <div class="task-list" id="history-container">
-        <p style="font-size: 12px; color: #94a3b8; text-align: center;">এখনো কোনো কাজ জমা দেওয়া হয়নি</p>
-    </div>
+    <div class="task-list" id="history-container"></div>
 
-    <!-- ৫. পপ-আপ (Pop-up) -->
     <div class="modal-overlay" id="popup-modal">
         <div class="modal-box">
             <h3>🎉 ২০ সেকেন্ড সম্পন্ন হয়েছে!</h3>
@@ -134,16 +122,13 @@
         let timerInterval = null;
         let isTabActive = true;
 
-        // লোড হওয়া সাবমিটেড টাস্ক ট্র্যাক
         let completedTaskIds = JSON.parse(localStorage.getItem("completed_tasks") || "[]");
         let taskHistory = JSON.parse(localStorage.getItem("task_history") || "[]");
 
-        // উইন্ডো ফোকাস ট্র্যাকিং (ওয়েবসাইট ছেড়ে গেলে কাউন্টডাউন বন্ধ করা)
+        // ওয়েবসাইট থেকে বের হলে কাউন্টডাউন বন্ধ রাখার লজিক
         window.addEventListener("focus", () => { isTabActive = true; });
         window.addEventListener("blur", () => { isTabActive = false; });
-        document.addEventListener("visibilitychange", () => {
-            isTabActive = !document.hidden;
-        });
+        document.addEventListener("visibilitychange", () => { isTabActive = !document.hidden; });
 
         function renderTasks() {
             const container = document.getElementById("task-container");
@@ -166,7 +151,7 @@
             });
 
             if (remainingCount === 0) {
-                container.innerHTML = `<p style="font-size: 13px; color: #4ade80; text-align: center; padding: 10px;">🎉 আপনার সকল কাজ শেষ!</p>`;
+                container.innerHTML = `<p style="font-size: 13px; color: #4ade80; text-align: center; padding: 10px;">🎉 আপনার আজকের সকল কাজ সম্পন্ন হয়েছে!</p>`;
             }
         }
 
@@ -179,14 +164,10 @@
 
             historyContainer.innerHTML = "";
             taskHistory.slice().reverse().forEach(item => {
-                let statusBadge = '<span class="status-pending">পেন্ডিং ⏳</span>';
-                if (item.status === "Approved") statusBadge = '<span class="status-approved">অনুমোদিত ✅</span>';
-                if (item.status === "Rejected") statusBadge = '<span class="status-rejected">বাতিল ❌</span>';
-
                 historyContainer.innerHTML += `
                     <div class="history-card">
                         <div><b>টাস্ক #${item.task_id}</b> (${item.type_name})</div>
-                        <div>${statusBadge}</div>
+                        <div><span class="status-pending">পেন্ডিং ⏳</span></div>
                     </div>
                 `;
             });
@@ -212,7 +193,7 @@
                     }
                 } else {
                     if (btnArea) {
-                        btnArea.innerHTML = `<button class="btn-link btn-disabled">পজড! ওয়েবসাইটে থাকুন (${timeLeft}s)</button>`;
+                        btnArea.innerHTML = `<button class="btn-link btn-disabled">পজড! পেজে থাকুন (${timeLeft}s)</button>`;
                     }
                 }
             }, 1000);
@@ -234,15 +215,10 @@
                 reward: reward
             };
 
-            // লোকালস্টোরেজে ডাটা আপডেট
             completedTaskIds.push(activeTaskId);
             localStorage.setItem("completed_tasks", JSON.stringify(completedTaskIds));
 
-            taskHistory.push({
-                task_id: activeTaskId,
-                type_name: typeName,
-                status: "Pending"
-            });
+            taskHistory.push({ task_id: activeTaskId, type_name: typeName });
             localStorage.setItem("task_history", JSON.stringify(taskHistory));
 
             document.getElementById("popup-modal").style.display = "none";
