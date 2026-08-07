@@ -58,8 +58,7 @@
       align-items: center;
     }
     .task-info { display: flex; flex-direction: column; gap: 4px; }
-    .task-name { font-size: 13px; font-weight: bold; color: #e2e8f0; }
-    .task-reward { font-size: 12px; color: #4ade80; font-weight: bold; }
+    .task-name { font-size: 14px; font-weight: bold; color: #e2e8f0; }
     .btn-task {
       background: #2563eb;
       color: white;
@@ -78,7 +77,7 @@
       display: none;
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.85);
       justify-content: center;
       align-items: center;
       padding: 16px;
@@ -93,7 +92,7 @@
       max-width: 360px;
       text-align: center;
     }
-    .modal-title { font-size: 16px; font-weight: bold; margin-bottom: 12px; color: #f8fafc; }
+    .modal-title { font-size: 15px; font-weight: bold; margin-bottom: 12px; color: #f8fafc; }
     .select-type {
       width: 100%;
       padding: 10px;
@@ -155,9 +154,9 @@
     <div class="modal-box">
       <div class="modal-title">📌 কি ধরনের কাজ করেছেন সিলেক্ট করুন</div>
       <select class="select-type" id="taskTypeSelect">
-        <option value="normal">📜 নরমাল এড স্ক্রলিং (৳৫)</option>
-        <option value="spin">🎰 স্পিন টাস্ক সম্পন্ন করেছি (৳৮)</option>
-        <option value="app">📲 অ্যাপ ডাউনলোড / বেটিং এড (৳১০)</option>
+        <option value="normal">📜 নরমাল এড স্ক্রলিং</option>
+        <option value="spin">🎰 স্পিন টাস্ক সম্পন্ন করেছি</option>
+        <option value="app">📲 অ্যাপ ডাউনলোড / বেটিং এড</option>
       </select>
       <button class="btn-submit" onclick="submitWork()">জমা দিন (Submit Task)</button>
     </div>
@@ -165,7 +164,7 @@
 
   <script>
     const tg = window.Telegram?.WebApp;
-    if (tg) tg.expand();
+    if (tg) tg.ready();
 
     const adLinks = [
       "https://www.effectivecpmnetwork.com/w2qni6kp7?key=7dd3088a50b10ebeab08e6107caae24e",
@@ -195,7 +194,6 @@
         card.innerHTML = `
           <div class="task-info">
             <div class="task-name">টাস্ক #${i + 1} (২০ সেকেন্ড থাকুন)</div>
-            <div class="task-reward">৳৫, ৳৮ বা ৳১০ রিওয়ার্ড</div>
           </div>
           <button class="btn-task ${isDone ? 'btn-completed' : ''}" 
                   ${isDone ? 'disabled' : ''} 
@@ -236,29 +234,18 @@
 
     function submitWork() {
       const selectedType = document.getElementById('taskTypeSelect').value;
-      let reward = 5.0;
-      let typeLabel = "নরমাল এড";
-
-      if (selectedType === 'spin') {
-        reward = 8.0;
-        typeLabel = "স্পিন টাস্ক";
-      } else if (selectedType === 'app') {
-        reward = 10.0;
-        typeLabel = "অ্যাপ ডাউনলোড / বেটিং এড";
-      }
 
       if (!completedTasks.includes(currentTaskIndex)) {
         completedTasks.push(currentTaskIndex);
         localStorage.setItem('completed_tasks', JSON.stringify(completedTasks));
         
-        showStatus(`🎉 কাজ জমা হয়েছে! (${typeLabel}) ৳${reward} ব্যালেন্স যোগ হয়েছে।`, "#15803d");
+        showStatus(`🎉 কাজ জমা হয়েছে! বটের চ্যাটে রিওয়ার্ড চেক করুন।`, "#15803d");
 
         if (tg) {
           tg.sendData(JSON.stringify({
             status: "success",
             task_index: currentTaskIndex,
-            task_type: selectedType,
-            reward: reward
+            task_type: selectedType
           }));
         }
       }
@@ -267,6 +254,10 @@
       currentTaskIndex = null;
       leaveTimestamp = null;
       renderTasks();
+      
+      setTimeout(() => {
+        if (tg) tg.close();
+      }, 1000);
     }
 
     window.addEventListener('focus', checkTaskCompletion);
