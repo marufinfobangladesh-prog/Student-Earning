@@ -89,6 +89,13 @@ async def daily_reset_task(app: Application):
                 pass
     save_data(DB_FILE, users_db)
 
+# 🔄 পোস্ট-ইনিশিয়ালাইজেশনে সিডিউলার শুরু
+async def post_init(app: Application) -> None:
+    tz = pytz.timezone('Asia/Dhaka')
+    scheduler = AsyncIOScheduler(timezone=tz)
+    scheduler.add_job(daily_reset_task, 'cron', hour=6, minute=0, args=[app])
+    scheduler.start()
+
 # Telegram Command Handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -304,13 +311,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 def main():
-    app = Application.builder().token(TOKEN).build()
-    
-    # Cron Scheduler setup (At 6:00 AM BD Time)
-    tz = pytz.timezone('Asia/Dhaka')
-    scheduler = AsyncIOScheduler(timezone=tz)
-    scheduler.add_job(daily_reset_task, 'cron', hour=6, minute=0, args=[app])
-    scheduler.start()
+    app = Application.builder().token(TOKEN).post_init(post_init).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("admin", admin_panel))
