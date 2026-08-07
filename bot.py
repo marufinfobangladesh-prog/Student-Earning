@@ -19,6 +19,7 @@ ADMIN_USERNAME = "ariyan_maruf009"
 DB_FILE = "users.json"
 PENDING_FILE = "pending_tasks.json"
 
+# Render/Koyeb Keep-Alive HTTP Server
 class SimpleHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -35,6 +36,7 @@ Thread(target=run_server, daemon=True).start()
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
+# JSON Helper Functions
 def load_data(file_name):
     if os.path.exists(file_name):
         try:
@@ -55,13 +57,14 @@ users_db = load_data(DB_FILE)
 pending_db = load_data(PENDING_FILE)
 
 def get_user_data(user_id_str, first_name="", referrer_id=None):
+    user_id_str = str(user_id_str)
     if user_id_str not in users_db:
         users_db[user_id_str] = {
             "name": first_name,
             "balance": 0.0,
             "completed_today": 0,
             "total_completed": 0,
-            "referrals": [], # রেফার করা ইউজারদের আইডি লিস্ট
+            "referrals": [],
             "referred_by": str(referrer_id) if referrer_id else None,
             "joined_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
@@ -79,7 +82,7 @@ def is_admin(user):
     is_username_match = (user.username and user.username.lower() == ADMIN_USERNAME.lower())
     return is_id_match or is_username_match
 
-# ⏰ অটোমেটিক বা ম্যানুয়াল কাজ রিলিজ ফানশন
+# ⏰ অটোমেটিক বা ম্যানুয়াল কাজ রিসেট ফানশন
 async def release_tasks_for_all(app: Application, manual=False):
     count = 0
     for uid, udata in users_db.items():
@@ -103,6 +106,7 @@ async def post_init(app: Application) -> None:
     scheduler.add_job(daily_reset_task, 'cron', hour=6, minute=0, args=[app])
     scheduler.start()
 
+# 🟢 Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id_str = str(user.id)
@@ -131,7 +135,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not is_admin(user):
-        await update.message.reply_text(f"❌ আপনি এই কমান্ডটি ব্যবহারের জন্য অনুমোদিত নন।")
+        await update.message.reply_text("❌ আপনি এই কমান্ডটি ব্যবহারের জন্য অনুমোদিত নন।")
         return
 
     total_users = len(users_db)
@@ -151,6 +155,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
+# 📩 Handlers
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -191,17 +196,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == "withdraw":
         if u['balance'] < 500:
-            await query.answer("❌ সর্বনিম্ন উইথড্র ৳৫০০!", show_alert=True)
+            await query.answer("❌ সর্বনিম্ন উইথড্র ৳৫০!", show_alert=True)
             await query.message.reply_text(f"❌ আপনার বর্তমান ব্যালেন্স ৳{u['balance']:.1f}। সর্বনিম্ন ৳৫০০ হলে বিকাশ নম্বরে টাকা তুলতে পারবেন।")
         else:
             await query.message.reply_text("📱 আপনার **বিকাশ (bKash)** নম্বরটি লিখুন:")
             context.user_data['waiting_bkash'] = True
 
     elif query.data == "list_users":
-        if not is_admin(user):
-            return
-        
-        msg = "📦 **ইউজার তালিকা ও পেন্ডিং স্ট্যাটাস:**\n\n"
+        if not is_admin(user): return
+        msg = "📦 **ইউজার তালিকা ও স্ট্যাটাস:**\n\n"
         for uid, udata in users_db.items():
             user_pending = sum(1 for t in pending_db.values() if t["user_id"] == uid)
             msg += f"👤 **ইউজার:** {udata.get('name', 'N/A')}\n"
@@ -209,18 +212,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg += f"💰 **ব্যালেন্স:** ৳{udata.get('balance', 0.0)}\n"
             msg += f"⏳ **পেন্ডিং কাজ:** {user_pending}টি | **আজকের কাজ:** {udata.get('completed_today', 0)}/১০\n"
             msg += "-----------------------------------\n"
-        
         await query.message.reply_text(msg, parse_mode="Markdown")
 
     elif query.data == "release_all_now":
-        if not is_admin(user):
-            return
+        if not is_admin(user): return
         count = await release_tasks_for_all(context.application, manual=True)
-        await query.message.reply_text(f"✅ সফলভাবে মোট `{count}` জন ইউজারের ১০টি কাজ রিলিজ করা হয়েছে এবং নোটিফিকেশন পাঠানো হয়েছে!", parse_mode="Markdown")
+        await query.message.reply_text(f"✅ সফলভাবে মোট `{count}` জন ইউজারের ১০টি কাজ রিলিজ করা হয়েছে!", parse_mode="Markdown")
 
     elif query.data == "review_pending":
-        if not is_admin(user):
-            return
+        if not is_admin(user): return
         if not pending_db:
             await query.message.reply_text("✅ কোন পেন্ডিং কাজ জমা নেই!")
             return
@@ -246,8 +246,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     elif query.data.startswith("app_"):
-        if not is_admin(user):
-            return
+        if not is_admin(user): return
         task_id = query.data.replace("app_", "")
         if task_id in pending_db:
             tdata = pending_db.pop(task_id)
@@ -265,7 +264,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 await context.bot.send_message(
                     chat_id=int(p_uid),
-                    text=f"🎉 **অভিনন্দন!**\n\nআপনার জমা দেওয়া কাজটি সফলভাবে **কনফার্ম** করা হয়েছে! আপনার ব্যালেন্সে **৳{reward}** যোগ হয়েছে।\n\n💰 **বর্তমান ব্যালেন্স:** ৳{pu['balance']:.1f}\n\nআরো কাজ করুন এবং বেশি বেশি ইনকাম করুন! 🚀",
+                    text=f"🎉 **অভিনন্দন!**\n\nআপনার জমা দেওয়া কাজটি সফলভাবে **কনফার্ম** করা হয়েছে! আপনার ব্যালেন্সে **৳{reward}** যোগ হয়েছে।\n\n💰 **বর্তমান ব্যালেন্স:** ৳{pu['balance']:.1f}",
                     parse_mode="Markdown"
                 )
             except Exception:
@@ -274,14 +273,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(f"✅ Task `{task_id}` Approved and Balance Added!")
 
     elif query.data.startswith("rej_"):
-        if not is_admin(user):
-            return
+        if not is_admin(user): return
         task_id = query.data.replace("rej_", "")
         if task_id in pending_db:
-            tdata = pending_db.pop(task_id)
+            pending_db.pop(task_id)
             save_data(PENDING_FILE, pending_db)
             await query.edit_message_text(f"❌ Task `{task_id}` Rejected!")
 
+# 🌐 WebApp Data Receiver
 async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id_str = str(update.effective_user.id)
     u = get_user_data(user_id_str, update.effective_user.first_name)
